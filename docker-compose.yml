@@ -1,0 +1,22 @@
+version: "3.8"
+
+networks:
+  copernicus-network:
+    driver: bridge
+
+volumes:
+  frontend_log:
+
+services:
+  copernicus-frontend:
+    container_name: chatbi-frontend
+    expose:
+      - 8080
+    ports:
+      - "9000:8080"
+    volumes:
+      - "frontend_log:/var/log"
+    image: "panda1024/chatbi-frontend:v0.1"
+    restart: always
+    networks:
+      - chatbi-frontend-network

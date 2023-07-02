@@ -1,6 +1,6 @@
 <template>
   <div class="container">
-    <div class="title">欢迎使用ChatExcel</div>
+    <div class="title">欢迎使用ChatBI</div>
     <div class="recomend">
       <div v-for="(item, i) in recomendList" :key="i" class="block">
         <div class="question-type">{{ item.title }}</div>

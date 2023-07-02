@@ -1,7 +1,7 @@
 <template>
   <div class="navbar">
     <img class="logo" src="../assets/logo.png" />
-    <div class="logo-name">ChatExcel</div>
+    <div class="logo-name">ChatBI</div>
   </div>
 </template>
 
