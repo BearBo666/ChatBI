@@ -28,7 +28,7 @@ export default {};
 .logo-name {
   font-size: 22px;
   font-weight: 700;
-  color: rgb(65, 184, 131);
+  color: rgb(86, 123, 247);
   height: 100%;
   display: flex;
   align-items: center;

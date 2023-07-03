@@ -27,6 +27,8 @@ import NavBar from "../components/Navbar.vue";
 import Msg from "../components/Msg.vue";
 import Welcome from "../components/Welcome.vue";
 
+import { getAnswer } from "../api";
+
 export default {
   name: "chat",
   components: {
@@ -40,6 +42,7 @@ export default {
       content: "",
       running: false,
       printIntv: null,
+      query_id: Math.floor(Math.random() * 9000 + 1000),
     };
   },
   methods: {
@@ -48,55 +51,75 @@ export default {
       this.content = "";
       this.running = false;
       this.printIntv = null;
+      this.query_id = Math.floor(Math.random() * 9000 + 1000);
     },
     // 提问
-    sendMsg() {
+    async sendMsg() {
       if (this.running) {
         this.running = false;
-      } else {
-        this.msgList.push({
-          content: this.content,
-          from: "user",
-        });
-        this.content = "";
-        this.msgList.push({
-          content: "",
-          from: "gpt",
-        });
-        this.running = true;
-        this.streamPrint();
+        return;
+      }
+      // 用户
+      this.msgList.push({
+        content: this.content,
+        from: "user",
+      });
+      this.content = "";
+      // gpt
+      this.msgList.push({
+        content: "",
+        from: "gpt",
+      });
+      this.running = true;
+      for (let i = 0; i < 10; i++) {
+        const status = await this.streamPrint();
+        if (status == 1) {
+          this.running = false;
+        }
       }
     },
     // 回答
-    getAnswer() {
-      return "测试".repeat(Math.floor(1 + Math.random() * 20));
+    answer() {
+      return getAnswer({
+        query_id: this.query_id,
+        chat: this.msgList
+          .filter((msg) => msg.from == "user")
+          .map((msg) => {
+            return {
+              consult: msg.content,
+            };
+          }),
+      });
     },
     // 流式打印
     async streamPrint() {
       clearInterval(this.printIntv);
-      let words = this.getAnswer();
-      let index = this.msgList.length - 1;
-      // 拼接完整的回答
-      let ans = this.msgList[index].content + words;
-      console.log(ans);
-      if (words.length > 0) {
+
+      const res = await this.answer();
+      if (!res) {
+        return 1;
+      }
+      const index = this.msgList.length - 1;
+      const len = this.msgList[index].content.length;
+      const ans = res.response;
+      const words = ans.slice(len);
+
+      // 有更多内容
+      if (res.response >= len) {
         await new Promise((resolve) => {
+          // 定时输出
           this.printIntv = setInterval(() => {
-            if (
-              !this.running ||
-              this.msgList[index].content.length >= ans.length
-            ) {
+            // 输出停止
+            if (!this.running || len >= ans.length) {
               this.running = false;
               clearInterval(this.printIntv);
               resolve();
             }
-            this.msgList[index].content = ans.slice(
-              0,
-              this.msgList[index].content.length + 1
-            );
+            this.msgList[index].content = ans.slice(0, len + 1);
           }, Math.floor(800 / words.length));
         });
       }
+      return res.status;
     },
   },
 };
