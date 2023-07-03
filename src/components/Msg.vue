@@ -24,6 +24,7 @@ export default {
   max-width: 70%;
   border-radius: 10px;
   padding: 10px 15px;
+  text-align: left;
 }
 .user {
   background-color: rgb(86, 123, 247);

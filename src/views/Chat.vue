@@ -1,8 +1,9 @@
 <template>
   <div class="main">
     <NavBar id="nav"></NavBar>
-    <Welcome v-if="msgList.length == 0" id="welcome"></Welcome>
+    <Welcome v-if="!showMsg" id="welcome" @choose="setTable"></Welcome>
     <div v-else id="msglist">
+      <div class="tip" @click="back">&lt; 选中了：{{ table_name }}</div>
       <Msg
         v-for="(item, i) in msgList"
         :content="item.content"
@@ -13,7 +14,7 @@
     <div id="quest-box">
       <div class="recycle-btn" @click="newCycle">新轮提问</div>
       <div class="input">
-        <input v-model="content" @keydown.enter="sendMsg" />
+        <input :disabled="running" v-model="content" @keydown.enter="sendMsg" />
       </div>
       <button @click="sendMsg" class="send-btn">
         {{ running ? "停止" : "发送" }}
@@ -26,8 +27,6 @@
 import NavBar from "../components/Navbar.vue";
 import Msg from "../components/Msg.vue";
 import Welcome from "../components/Welcome.vue";
-
-import { getAnswer } from "../api";
 
 export default {
   name: "chat",
@@ -42,7 +41,8 @@ export default {
       content: "",
       running: false,
       printIntv: null,
-      query_id: Math.floor(Math.random() * 9000 + 1000),
+      showMsg: false,
+      table_name: "",
     };
   },
   methods: {
@@ -51,10 +51,17 @@ export default {
       this.content = "";
       this.running = false;
       this.printIntv = null;
-      this.query_id = Math.floor(Math.random() * 9000 + 1000);
+    },
+    setTable(table_name) {
+      this.table_name = table_name;
+      this.showMsg = true;
+      this.newCycle();
+    },
+    back() {
+      this.showMsg = false;
     },
     // 提问
-    async sendMsg() {
+    sendMsg() {
       if (this.running) {
         this.running = false;
         return;
@@ -65,50 +72,33 @@ export default {
         from: "user",
       });
       this.content = "";
+
       // gpt
       this.msgList.push({
         content: "",
         from: "gpt",
       });
       this.running = true;
-      for (let i = 0; i < 10; i++) {
-        const status = await this.streamPrint();
-        if (status == 1) {
-          this.running = false;
-        }
-      }
+      this.streamPrint();
     },
     // 回答
     answer() {
-      return getAnswer({
-        query_id: this.query_id,
-        chat: this.msgList
-          .filter((msg) => msg.from == "user")
-          .map((msg) => {
-            return {
-              consult: msg.content,
-            };
-          }),
-      });
+      return "根据提供的数据，我们对不同产品型号在不同平台上的评论数进行了分析。以下是对该数据的简要分析：\n\n1. N1 SK_2022产品型号：\n   - 在小红书平台上获得了最多的评论数，共有12253条评论。\n   - 在微博平台上获得了第二多的评论数，共有2179条评论。\n   - 在淘宝平台上获得了第三多的评论数，共有2351条评论。\n\n2. 夜皇后_2022产品型号：\n   - 在微博平台上获得了最多的评论数，共有92087条评论。\n   - 在小红书平台上获得了第二多的评论数，共有26582条评论。\n   - 在淘宝平台上获得了第三多的评论数，共有20078条评论。\n\n3. 绿宝瓶_2022产品型号：\n   - 在微博平台上获得了最多的评论数，共有3447条评论。\n   - 在小红书平台上获得了第二多的评论数，共有26247条评论。\n   - 在淘宝平台上获得了第三多的评论数，共有10857条评论。\n\n根据以上分析，我们可以看出不同产品型号在不同平台上的评论数存在较大差异，其中微博和小红书是获得评论数最多的平台。这些数据可以为产品的市场推广和用户反馈提供参考。";
     },
     // 流式打印
     async streamPrint() {
       clearInterval(this.printIntv);
 
-      const res = await this.answer();
-      if (!res) {
-        return 1;
-      }
       const index = this.msgList.length - 1;
-      const len = this.msgList[index].content.length;
-      const ans = res.response;
-      const words = ans.slice(len);
+      let len = this.msgList[index].content.length;
+      const ans = this.answer();
 
       // 有更多内容
-      if (res.response >= len) {
+      if (ans.length >= len) {
         await new Promise((resolve) => {
           // 定时输出
           this.printIntv = setInterval(() => {
+            len = this.msgList[index].content.length;
             // 输出停止
             if (!this.running || len >= ans.length) {
               this.running = false;
@@ -116,10 +106,9 @@ export default {
               resolve();
             }
             this.msgList[index].content = ans.slice(0, len + 1);
-          }, Math.floor(800 / words.length));
+          }, Math.floor(20000 / ans.length));
         });
       }
-      return res.status;
     },
   },
 };
@@ -142,6 +131,13 @@ export default {
   flex-grow: 1;
   display: flex;
   flex-direction: column;
+  position: relative;
+}
+.tip {
+  position: absolute;
+  font-size: 18px;
+  left: 50px;
+  cursor: pointer;
 }
 #quest-box {
   height: 90px;
